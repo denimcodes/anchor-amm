@@ -15,6 +15,8 @@ import {
   getOrCreateAssociatedTokenAccount,
   mintTo,
 } from "@solana/spl-token";
+import { randomBytes } from "crypto";
+import { fail } from "assert";
 
 describe("anchor-amm", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
@@ -24,7 +26,7 @@ describe("anchor-amm", () => {
 
   const program = anchor.workspace.anchorAmm as Program<AnchorAmm>;
 
-  const seed = new anchor.BN(8);
+  const seed = new anchor.BN(randomBytes(8));
   const [config] = PublicKey.findProgramAddressSync(
     [Buffer.from("config"), seed.toArrayLike(Buffer, "le", 8)],
     program.programId
@@ -137,12 +139,85 @@ describe("anchor-amm", () => {
   });
 
   it("deposit tokens", async () => {
-    const amount = new anchor.BN(500);
-    const maxX = new anchor.BN(200);
-    const maxY = new anchor.BN(300);
+    const amount = new anchor.BN(1000);
+    const maxX = new anchor.BN(500);
+    const maxY = new anchor.BN(500);
 
     program.methods
       .deposit(amount, maxX, maxY)
+      .accounts({
+        user: user.publicKey,
+        // @ts-ignore
+        mintX: mintX.publicKey,
+        mintY: mintY.publicKey,
+        mintLp,
+        config,
+        vaultX,
+        vaultY,
+        userX,
+        userY,
+        userLp,
+      })
+      .rpc()
+      .then(confirm)
+      .catch(console.error);
+  });
+
+  it("swap x", async () => {
+    const isX = true;
+    const amount = new anchor.BN(500);
+    const min = new anchor.BN(500);
+    program.methods
+      .swap(isX, amount, min)
+      .accounts({
+        user: user.publicKey,
+        mintX: mintX.publicKey,
+        mintY: mintY.publicKey,
+        // @ts-ignore
+        mintLp,
+        config,
+        vaultX,
+        vaultY,
+        userX,
+        userY,
+        userLp,
+      })
+      .rpc()
+      .then(confirm)
+      .then(log)
+      .catch(console.error);
+  });
+  it("swap y", async () => {
+    const isX = false;
+    const amount = new anchor.BN(500);
+    const min = new anchor.BN(500);
+    program.methods
+      .swap(isX, amount, min)
+      .accounts({
+        user: user.publicKey,
+        mintX: mintX.publicKey,
+        mintY: mintY.publicKey,
+        // @ts-ignore
+        mintLp,
+        config,
+        vaultX,
+        vaultY,
+        userX,
+        userY,
+        userLp,
+      })
+      .rpc()
+      .then(confirm)
+      .then(log)
+      .catch(console.error);
+  });
+  it("withdraw", async () => {
+    const amount = new anchor.BN(1000);
+    const minX = new anchor.BN(500);
+    const minY = new anchor.BN(500);
+
+    program.methods
+      .withdraw(amount, minX, minY)
       .accounts({
         user: user.publicKey,
         // @ts-ignore
